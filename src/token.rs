@@ -149,3 +149,25 @@ impl std::fmt::Display for Token {
         }
     }
 }
+
+pub fn expect_token(
+    mut input: impl Iterator<Item = Token>,
+    token_type: TokenType,
+) -> Result<Token, String> {
+    match input.next() {
+        Some(token) => {
+            if token.token_type != token_type {
+                Err(format!(
+                    "Unexpected token {}, expected {}",
+                    token.token_type, token_type
+                ))
+            } else {
+                Ok(token)
+            }
+        }
+        None => Err(format!(
+            "Unexpected end of token stream, expected {}",
+            token_type
+        )),
+    }
+}

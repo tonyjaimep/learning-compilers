@@ -1,54 +1,34 @@
-use std::fmt::Display;
-use std::io::stdin;
-
-use trees::Node;
-
-mod lexeme;
+use std::io::{stdin, Read};
+mod expression;
+mod statement;
 mod token;
 
 mod lexical_analysis;
 mod syntax_analysis;
 
-fn tree_to_string<T: Display>(node: &Node<T>) -> String {
-    if node.has_no_child() {
-        node.data().to_string()
-    } else {
-        format!(
-            "{}( {})",
-            node.data(),
-            node.iter()
-                .fold(String::new(), |s, c| format!("{}{} ", s, tree_to_string(c)))
-        )
-    }
-}
-
 fn main() {
-    for line in stdin().lines() {
-        let input = match line {
-            Ok(input) => input,
-            Err(_) => break,
-        };
+    log::trace!("Starting input from standard input");
+    let char_iter = stdin().bytes().filter_map(|b| b.ok()).map(|b| b as char);
 
-        if input.is_empty() {
-            break;
+    log::trace!("Staring lexical analysis");
+
+    let mut token_stream = match lexical_analysis::lexical_analysis(char_iter) {
+        Ok(value) => value,
+        Err(message) => {
+            log::error!("Failed lexical analysis: {message}");
+            return;
         }
+    };
 
-        let token_stream = match lexical_analysis::lexical_analysis(input.chars()) {
-            Ok(value) => value,
-            Err(message) => {
-                println!("Failed lexical analysis: {message}");
-                continue;
-            }
-        };
+    log::trace!("Lexical analysis completed");
 
-        let syntax_tree = match syntax_analysis::syntax_analysis(token_stream) {
-            Ok(value) => value,
-            Err(message) => {
-                println!("Failed syntax analysis: {message}");
-                continue;
-            }
-        };
+    let syntax_statement = match syntax_analysis::syntax_analysis(&mut token_stream) {
+        Ok(value) => value,
+        Err(message) => {
+            log::error!("Failed syntax analysis: {message}");
+            return;
+        }
+    };
 
-        println!("{}", tree_to_string(&syntax_tree));
-    }
+    println!("{}", syntax_statement);
 }

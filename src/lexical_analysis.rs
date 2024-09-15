@@ -1,3 +1,5 @@
+use std::iter::Peekable;
+
 use crate::token::*;
 
 #[derive(Debug)]
@@ -230,7 +232,7 @@ fn build_tokens(
 
 pub fn lexical_analysis(
     input: impl Iterator<Item = char>,
-) -> Result<impl Iterator<Item = Token>, String> {
+) -> Result<Peekable<impl Iterator<Item = Token>>, String> {
     let token_building_state = build_tokens(
         input,
         TokenBuildingState {
@@ -240,5 +242,5 @@ pub fn lexical_analysis(
         },
     );
 
-    Ok(token_building_state?.token_vector.into_iter())
+    Ok(token_building_state?.token_vector.into_iter().peekable())
 }
