@@ -145,7 +145,7 @@ fn handle_character(
             )),
             _ => unexpected_character_error(character, state),
         },
-        '<' | '>' | '+' | '-' => match state.state_type {
+        '/' | '*' | '<' | '>' | '+' | '-' => match state.state_type {
             TokenBuildingStateType::NumericPeriod => unexpected_character_error(character, state),
             TokenBuildingStateType::ComposableOperator => {
                 accumulate_character_and_commit_accumulator(character, state)
