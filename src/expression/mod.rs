@@ -115,7 +115,10 @@ pub fn parse_expression(
                             .into_iter()
                             .peekable(),
                     )?;
-                    return Ok(tr(operator) / (first_operand / second_operand));
+                    let mut root = Tree::new(operator);
+                    root.push_back(first_operand);
+                    root.push_back(second_operand);
+                    return Ok(root);
                 } else {
                     let operand_tokens: &[Token] = if position == 0 {
                         &expression_tokens[1..]
