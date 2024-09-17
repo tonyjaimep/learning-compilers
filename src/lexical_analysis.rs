@@ -18,12 +18,43 @@ enum TokenBuildingStateType {
     NumericPeriod,
     // 0-9+.0-9+ in stack
     NumericFloatingPoint,
+    // / in stack
+    MaybeComment,
+    // // found. waiting for newline
+    LineComment,
+    // /* found. waiting for *
+    BlockComment,
+    // /* * found. waiting for /
+    BlockCommentMaybeClosing,
 }
 
 struct TokenBuildingState {
     pub state_type: TokenBuildingStateType,
     pub accumulator: String,
     pub token_vector: Vec<Token>,
+}
+
+macro_rules! composable_operators {
+    () => {
+        '*' | '<' | '>' | '+' | '-'
+    };
+}
+
+macro_rules! grouping_characters {
+    () => {
+        '{' | '}' | '(' | ')'
+    };
+}
+
+fn reset_state_with_state_type(
+    state: TokenBuildingState,
+    state_type: TokenBuildingStateType,
+) -> TokenBuildingState {
+    TokenBuildingState {
+        state_type,
+        accumulator: String::new(),
+        token_vector: state.token_vector,
+    }
 }
 
 fn push_token(state: TokenBuildingState, token: Token) -> TokenBuildingState {
@@ -65,27 +96,43 @@ fn unexpected_character_error(
     state: TokenBuildingState,
 ) -> Result<TokenBuildingState, String> {
     Err(format!(
-        "Unexpected {} after {}, with state {}",
+        "Unexpected {} after {}, with state {:?}",
         if character.is_whitespace() {
             String::from("whitespace")
         } else {
-            character.to_string()
+            character.into()
         },
         if state.accumulator.is_empty() {
             String::from("empty string")
         } else {
-            state.accumulator.to_string()
+            state.accumulator.into()
         },
-        format!("{:?}", state.state_type)
+        state.state_type
     ))
 }
 
 fn commit_accumulator_and_begin_with_character(
     character: char,
     state: TokenBuildingState,
-    state_type: TokenBuildingStateType,
 ) -> Result<TokenBuildingState, String> {
     let state_after_committing_accumulator = commit_accumulator(state)?;
+
+    let state_type = match character {
+        '=' => TokenBuildingStateType::Equal,
+        '/' => TokenBuildingStateType::MaybeComment,
+        composable_operators!() => TokenBuildingStateType::ComposableOperator,
+        // single-character tokens result in an empty state
+        ';' | grouping_characters!() => {
+            return Ok(push_token(
+                state_after_committing_accumulator,
+                Token::try_from(character.to_string())?,
+            ))
+        }
+        _ if character.is_alphabetic() => TokenBuildingStateType::Alphabetic,
+        _ if character.is_numeric() => TokenBuildingStateType::Numeric,
+        _ => return unexpected_character_error(character, state_after_committing_accumulator),
+    };
+
     return Ok(accumulate_character(
         character,
         state_after_committing_accumulator,
@@ -120,97 +167,139 @@ fn handle_character(
     character: char,
     state: TokenBuildingState,
 ) -> Result<TokenBuildingState, String> {
-    match character {
-        '{' | '}' | '(' | ')' | ';' => match state.state_type {
-            TokenBuildingStateType::NumericPeriod => unexpected_character_error(character, state),
-            _ => commit_accumulator_and_single_character_token(character, state),
-        },
-        '=' => match state.state_type {
-            TokenBuildingStateType::Numeric
-            | TokenBuildingStateType::Alphabetic
-            | TokenBuildingStateType::NumericFloatingPoint => {
-                commit_accumulator_and_begin_with_character(
-                    character,
-                    state,
-                    TokenBuildingStateType::Equal,
-                )
+    match state.state_type {
+        // character will be accumulated either way. figure out next state
+        TokenBuildingStateType::Empty => {
+            if character.is_whitespace() {
+                return Ok(state);
             }
-            TokenBuildingStateType::ComposableOperator | TokenBuildingStateType::Equal => {
-                accumulate_character_and_commit_accumulator(character, state)
-            }
-            TokenBuildingStateType::Empty => Ok(accumulate_character(
+
+            let new_token_building_state_type = match character {
+                '/' => TokenBuildingStateType::MaybeComment,
+                '=' => TokenBuildingStateType::Equal,
+                composable_operators!() => TokenBuildingStateType::ComposableOperator,
+                ';' | grouping_characters!() => {
+                    return accumulate_character_and_commit_accumulator(character, state)
+                }
+                _ if character.is_alphabetic() => TokenBuildingStateType::Alphabetic,
+                _ if character.is_numeric() => TokenBuildingStateType::Numeric,
+                _ => return unexpected_character_error(character, state),
+            };
+
+            Ok(accumulate_character(
                 character,
                 state,
-                TokenBuildingStateType::Equal,
-            )),
+                new_token_building_state_type,
+            ))
+        }
+        TokenBuildingStateType::Equal => match character {
+            '=' => accumulate_character_and_commit_accumulator(character, state),
+            '/' | ';' | grouping_characters!() | _ if character.is_alphanumeric() => {
+                commit_accumulator_and_single_character_token(character, state)
+            }
+            _ if character.is_whitespace() => commit_accumulator(state),
             _ => unexpected_character_error(character, state),
         },
-        '/' | '*' | '<' | '>' | '+' | '-' => match state.state_type {
-            TokenBuildingStateType::NumericPeriod => unexpected_character_error(character, state),
-            TokenBuildingStateType::ComposableOperator => {
+        TokenBuildingStateType::ComposableOperator => match character {
+            '=' | composable_operators!() => {
                 accumulate_character_and_commit_accumulator(character, state)
             }
-            TokenBuildingStateType::Empty => Ok(accumulate_character(
-                character,
-                state,
-                TokenBuildingStateType::ComposableOperator,
-            )),
-            TokenBuildingStateType::Alphabetic
-            | TokenBuildingStateType::NumericFloatingPoint
-            | TokenBuildingStateType::Numeric => commit_accumulator_and_begin_with_character(
-                character,
-                state,
-                TokenBuildingStateType::ComposableOperator,
-            ),
+            '/' | ';' | grouping_characters!() | _ if character.is_alphanumeric() => {
+                commit_accumulator_and_single_character_token(character, state)
+            }
+            _ if character.is_whitespace() => commit_accumulator(state),
             _ => unexpected_character_error(character, state),
         },
-        '.' => match state.state_type {
-            TokenBuildingStateType::Numeric => Ok(accumulate_character(
+        TokenBuildingStateType::Alphabetic => {
+            match character {
+                ';' | grouping_characters!() | '=' | '/' | composable_operators!() => {
+                    commit_accumulator_and_begin_with_character(character, state)
+                }
+                // identifiers can be composed of letters and numbers but not viceversa
+                _ if character.is_alphanumeric() => {
+                    return Ok(accumulate_character(
+                        character,
+                        state,
+                        TokenBuildingStateType::Alphabetic,
+                    ))
+                }
+                _ if character.is_whitespace() => commit_accumulator(state),
+                _ => return unexpected_character_error(character, state),
+            }
+        }
+        TokenBuildingStateType::Numeric => match character {
+            '=' | '/' | composable_operators!() | grouping_characters!() => {
+                commit_accumulator_and_begin_with_character(character, state)
+            }
+            '.' => Ok(accumulate_character(
                 character,
                 state,
                 TokenBuildingStateType::NumericPeriod,
             )),
-            _ => unexpected_character_error(character, state),
-        },
-        _ if character.is_alphabetic() => match state.state_type {
-            TokenBuildingStateType::Empty | TokenBuildingStateType::Alphabetic => Ok(
-                accumulate_character(character, state, TokenBuildingStateType::Alphabetic),
-            ),
-            TokenBuildingStateType::NumericFloatingPoint
-            | TokenBuildingStateType::NumericPeriod
-            | TokenBuildingStateType::Numeric => unexpected_character_error(character, state),
-            _ => commit_accumulator_and_begin_with_character(
+            ';' => commit_accumulator_and_single_character_token(character, state),
+            _ if character.is_numeric() => Ok(accumulate_character(
                 character,
                 state,
-                TokenBuildingStateType::Alphabetic,
-            ),
+                TokenBuildingStateType::Numeric,
+            )),
+            _ if character.is_whitespace() => commit_accumulator(state),
+            _ => unexpected_character_error(character, state),
         },
-        _ if character.is_whitespace() => {
-            return match state.state_type {
-                TokenBuildingStateType::NumericPeriod => {
-                    unexpected_character_error(character, state)
-                }
-                _ => commit_accumulator(state),
-            };
-        }
-        _ if character.is_numeric() => match state.state_type {
-            TokenBuildingStateType::NumericFloatingPoint
-            | TokenBuildingStateType::NumericPeriod => Ok(accumulate_character(
+        TokenBuildingStateType::NumericPeriod => match character {
+            _ if character.is_numeric() => Ok(accumulate_character(
                 character,
                 state,
                 TokenBuildingStateType::NumericFloatingPoint,
             )),
-            TokenBuildingStateType::Numeric | TokenBuildingStateType::Empty => Ok(
-                accumulate_character(character, state, TokenBuildingStateType::Numeric),
-            ),
-            TokenBuildingStateType::Alphabetic => unexpected_character_error(character, state),
-            _ => commit_accumulator_and_begin_with_character(
+            _ => unexpected_character_error(character, state),
+        },
+        TokenBuildingStateType::NumericFloatingPoint => match character {
+            '=' | '/' | composable_operators!() | grouping_characters!() => {
+                commit_accumulator_and_begin_with_character(character, state)
+            }
+            _ if character.is_numeric() => Ok(accumulate_character(
                 character,
                 state,
-                TokenBuildingStateType::Numeric,
-            ),
+                TokenBuildingStateType::NumericFloatingPoint,
+            )),
+            _ if character.is_whitespace() => commit_accumulator(state),
+            _ => unexpected_character_error(character, state),
         },
-        _ => unexpected_character_error(character, state),
+        TokenBuildingStateType::MaybeComment => match character {
+            '/' => Ok(reset_state_with_state_type(
+                state,
+                TokenBuildingStateType::LineComment,
+            )),
+            '*' => Ok(reset_state_with_state_type(
+                state,
+                TokenBuildingStateType::BlockComment,
+            )),
+            '=' => accumulate_character_and_commit_accumulator(character, state),
+            _ if character.is_whitespace() => commit_accumulator(state),
+            _ => commit_accumulator_and_begin_with_character(character, state),
+        },
+        TokenBuildingStateType::LineComment => match character {
+            // ignore everything but newlines
+            '\n' => Ok(reset_state_with_state_type(
+                state,
+                TokenBuildingStateType::Empty,
+            )),
+            _ => Ok(state),
+        },
+        TokenBuildingStateType::BlockComment => match character {
+            '*' => Ok(reset_state_with_state_type(
+                state,
+                TokenBuildingStateType::BlockCommentMaybeClosing,
+            )),
+            _ => Ok(state),
+        },
+        TokenBuildingStateType::BlockCommentMaybeClosing => match character {
+            '/' => Ok(reset_state_with_state_type(
+                state,
+                TokenBuildingStateType::Empty,
+            )),
+            _ => Ok(state),
+        },
     }
 }
 
@@ -240,7 +329,7 @@ pub fn lexical_analysis(
             accumulator: String::new(),
             token_vector: vec![],
         },
-    );
+    )?;
 
-    Ok(token_building_state?.token_vector.into_iter().peekable())
+    Ok(token_building_state.token_vector.into_iter().peekable())
 }
