@@ -7,6 +7,8 @@ mod lexical_analysis;
 mod syntax_analysis;
 
 fn main() {
+    env_logger::init();
+
     log::trace!("Starting input from standard input");
     let char_iter = stdin().bytes().filter_map(|b| b.ok()).map(|b| b as char);
 
