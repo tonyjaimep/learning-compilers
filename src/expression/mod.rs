@@ -48,10 +48,11 @@ pub fn parse_expression(
     }
 
     let operator_precedence = vec![
+        vec![TokenType::OperatorAssignment],
+        vec![TokenType::OperatorAddition, TokenType::OperatorSubtraction],
         vec![
-            TokenType::OperatorAssignment,
-            TokenType::OperatorIncreaseBy,
-            TokenType::OperatorDecreaseBy,
+            TokenType::OperatorMultiplication,
+            TokenType::OperatorDivision,
         ],
         vec![
             TokenType::OperatorDecrement,
@@ -62,11 +63,7 @@ pub fn parse_expression(
             TokenType::OperatorLessThanOrEqual,
             TokenType::OperatorEqual,
         ],
-        vec![
-            TokenType::OperatorMultiplication,
-            TokenType::OperatorDivision,
-        ],
-        vec![TokenType::OperatorAddition, TokenType::OperatorSubtraction],
+        vec![TokenType::OperatorIncreaseBy, TokenType::OperatorDecreaseBy],
     ];
 
     for precedence in operator_precedence {

@@ -32,5 +32,5 @@ fn main() {
         }
     };
 
-    println!("{}", syntax_statement);
+    println!("{:?}", syntax_statement);
 }

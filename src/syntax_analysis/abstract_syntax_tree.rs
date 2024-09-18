@@ -2,7 +2,8 @@ use trees::Tree;
 
 use crate::token::{Token, TokenType, TokenValue};
 
-enum Relation {
+#[derive(Debug, PartialEq)]
+pub enum Relation {
     GreaterThan,
     GreaterThanOrEqual,
     LessThan,
@@ -11,7 +12,8 @@ enum Relation {
     NotEqualTo,
 }
 
-enum BinaryOperation {
+#[derive(Debug, PartialEq)]
+pub enum BinaryOperation {
     Add,
     IncreaseBy,
     Subtract,
@@ -22,18 +24,18 @@ enum BinaryOperation {
     DivideBy,
 }
 
-enum UnaryOperation {
+#[derive(Debug, PartialEq)]
+pub enum UnaryOperation {
     Increment,
     Decrement,
 }
 
+#[derive(Debug, PartialEq)]
 pub enum SyntaxComponent {
     Null,
     Sequence,
-    Statement,
     If,
     For,
-    Expression,
     Assignment,
     Relation(Relation),
     BinaryOperation(BinaryOperation),

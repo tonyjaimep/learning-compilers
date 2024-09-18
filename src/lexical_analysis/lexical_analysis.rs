@@ -1,9 +1,6 @@
 use std::iter::Peekable;
 
-use crate::{
-    symbol_table::{self, SymbolTable},
-    token::*,
-};
+use crate::token::*;
 
 #[derive(Debug)]
 enum TokenBuildingStateType {
@@ -49,11 +46,6 @@ macro_rules! grouping_characters {
     () => {
         '{' | '}' | '(' | ')'
     };
-}
-
-fn tokenize(string: String, symbol_table: SymbolTable) -> Result<(Token, SymbolTable)> {
-    let token = Token::try_from(string)?;
-    symbol_table.insert(k, v)
 }
 
 fn reset_state_with_state_type(
