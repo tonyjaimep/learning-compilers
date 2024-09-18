@@ -333,3 +333,108 @@ pub fn lexical_analysis(
 
     Ok(token_building_state.token_vector.into_iter().peekable())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn assert_input_tokenizes_as(
+        input: String,
+        expected_tokens: Vec<(TokenType, Option<TokenValue>)>,
+    ) {
+        let result = lexical_analysis(input.chars());
+        assert!(result.is_ok());
+
+        let mut actual = result.unwrap();
+
+        for (token_type, token_value) in expected_tokens {
+            let next_option = actual.next();
+            assert!(next_option.is_some());
+
+            let actual_token = next_option.unwrap();
+            assert_eq!(actual_token.token_type, token_type);
+            assert_eq!(actual_token.value, token_value);
+        }
+
+        assert!(actual.next().is_none());
+    }
+
+    #[test]
+    fn it_tokenizes_floating_point_values() {
+        let input = String::from("123.4");
+        let expected_tokens = vec![
+            (TokenType::Constant, Some(TokenValue::Float(123.4))),
+            (TokenType::EOF, None),
+        ];
+
+        assert_input_tokenizes_as(input, expected_tokens);
+    }
+
+    #[test]
+    fn it_tokenizes_integer_constants_as_floats() {
+        let input = String::from("42");
+        let expected_tokens = vec![
+            (TokenType::Constant, Some(TokenValue::Float(42.0))),
+            (TokenType::EOF, None),
+        ];
+
+        assert_input_tokenizes_as(input, expected_tokens);
+    }
+
+    #[test]
+    fn it_interrupts_numbers_when_grouping_characters_are_reached() {
+        let input = String::from("24{9821}2)");
+        let expected_tokens = vec![
+            (TokenType::Constant, Some(TokenValue::Float(24.0))),
+            (TokenType::CurlyOpening, None),
+            (TokenType::Constant, Some(TokenValue::Float(9821.0))),
+            (TokenType::CurlyClosing, None),
+            (TokenType::Constant, Some(TokenValue::Float(2.0))),
+            (TokenType::ParenthesisClosing, None),
+            (TokenType::EOF, None),
+        ];
+
+        assert_input_tokenizes_as(input, expected_tokens)
+    }
+
+    #[test]
+    fn it_breaks_numbers_apart_using_whitespace() {
+        let input = String::from("42 60 42.8 231");
+        let expected_tokens = vec![
+            (TokenType::Constant, Some(TokenValue::Float(42.0))),
+            (TokenType::Constant, Some(TokenValue::Float(60.0))),
+            (TokenType::Constant, Some(TokenValue::Float(42.8))),
+            (TokenType::Constant, Some(TokenValue::Float(231.0))),
+            (TokenType::EOF, None),
+        ];
+
+        assert_input_tokenizes_as(input, expected_tokens);
+    }
+
+    #[test]
+    fn it_tokenizes_keywords() {
+        let input = String::from("for if");
+        let expected_tokens = vec![
+            (TokenType::For, None),
+            (TokenType::If, None),
+            (TokenType::EOF, None),
+        ];
+
+        assert_input_tokenizes_as(input, expected_tokens);
+    }
+
+    #[test]
+    fn it_tokenizes_identifiers() {
+        let input = String::from("for if foo bar");
+        let expected_tokens = vec![
+            (TokenType::For, None),
+            (TokenType::If, None),
+            // TODO: replace '42' with 0 and 1
+            (TokenType::Identifier, Some(TokenValue::SymbolKey(42))),
+            (TokenType::Identifier, Some(TokenValue::SymbolKey(42))),
+            (TokenType::EOF, None),
+        ];
+
+        assert_input_tokenizes_as(input, expected_tokens)
+    }
+}
