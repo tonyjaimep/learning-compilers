@@ -20,31 +20,21 @@ pub enum Statement {
 pub fn parse_statement(
     input: &mut Peekable<impl Iterator<Item = Token>>,
 ) -> Result<Statement, String> {
-    if let Some(next_token) = input.peek() {
-        match next_token.token_type {
-            TokenType::For => match parse_for(input) {
-                Ok(for_statement) => Ok(Statement::For(for_statement)),
-                Err(message) => Err(message),
-            },
-            TokenType::If => match parse_if(input) {
-                Ok(if_statement) => Ok(Statement::If(if_statement)),
-                Err(message) => Err(message),
-            },
-            TokenType::CurlyOpening => match parse_block(input) {
-                Ok(block_statement) => Ok(Statement::Block(block_statement)),
-                Err(message) => Err(message),
-            },
-            _ => match parse_optional_expression(input) {
-                Ok(optional_expression) => {
-                    expect_token(input, TokenType::Semicolon)?;
-                    Ok(Statement::OptionalExpression(optional_expression))
-                }
-                Err(message) => Err(message),
-            },
-        }
-    } else {
-        return Ok(Statement::OptionalExpression(None));
-    }
+    let value = match input.peek() {
+        Some(next_token) => match next_token.token_type {
+            TokenType::For => Statement::For(parse_for(input)?),
+            TokenType::If => Statement::If(parse_if(input)?),
+            TokenType::CurlyOpening => Statement::Block(parse_block(input)?),
+            _ => {
+                let optional_expression = parse_optional_expression(input)?;
+                expect_token(input, TokenType::Semicolon)?;
+                Statement::OptionalExpression(optional_expression)
+            }
+        },
+        None => Statement::OptionalExpression(None),
+    };
+
+    Ok(value)
 }
 
 impl fmt::Display for Statement {
