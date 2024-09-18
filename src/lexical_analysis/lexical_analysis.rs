@@ -6,6 +6,8 @@ use crate::token::*;
 enum TokenBuildingStateType {
     // empty stack
     Empty,
+    // only single ! in stack
+    Not,
     // only single = in stack
     Equal,
     // only composable operators in stack
@@ -118,6 +120,7 @@ fn commit_accumulator_and_begin_with_character(
     let state_after_committing_accumulator = commit_accumulator(state)?;
 
     let state_type = match character {
+        '!' => TokenBuildingStateType::Not,
         '=' => TokenBuildingStateType::Equal,
         '/' => TokenBuildingStateType::MaybeComment,
         composable_operators!() => TokenBuildingStateType::ComposableOperator,
@@ -177,6 +180,7 @@ fn handle_character(
             let new_token_building_state_type = match character {
                 '/' => TokenBuildingStateType::MaybeComment,
                 '=' => TokenBuildingStateType::Equal,
+                '!' => TokenBuildingStateType::Not,
                 composable_operators!() => TokenBuildingStateType::ComposableOperator,
                 ';' | grouping_characters!() => {
                     return accumulate_character_and_commit_accumulator(character, state)
@@ -200,6 +204,10 @@ fn handle_character(
             _ if character.is_whitespace() => commit_accumulator(state),
             _ => unexpected_character_error(character, state),
         },
+        TokenBuildingStateType::Not => match character {
+            '=' => accumulate_character_and_commit_accumulator(character, state),
+            _ => unexpected_character_error(character, state),
+        },
         TokenBuildingStateType::ComposableOperator => match character {
             '=' | composable_operators!() => {
                 accumulate_character_and_commit_accumulator(character, state)
@@ -212,7 +220,7 @@ fn handle_character(
         },
         TokenBuildingStateType::Alphabetic => {
             match character {
-                ';' | grouping_characters!() | '=' | '/' | composable_operators!() => {
+                ';' | '=' | '/' | '!' | grouping_characters!() | composable_operators!() => {
                     commit_accumulator_and_begin_with_character(character, state)
                 }
                 // identifiers can be composed of letters and numbers but not viceversa
@@ -228,7 +236,7 @@ fn handle_character(
             }
         }
         TokenBuildingStateType::Numeric => match character {
-            '=' | '/' | composable_operators!() | grouping_characters!() => {
+            '=' | '/' | '!' | composable_operators!() | grouping_characters!() => {
                 commit_accumulator_and_begin_with_character(character, state)
             }
             '.' => Ok(accumulate_character(
@@ -254,7 +262,7 @@ fn handle_character(
             _ => unexpected_character_error(character, state),
         },
         TokenBuildingStateType::NumericFloatingPoint => match character {
-            '=' | '/' | composable_operators!() | grouping_characters!() => {
+            '=' | '/' | '!' | composable_operators!() | grouping_characters!() => {
                 commit_accumulator_and_begin_with_character(character, state)
             }
             _ if character.is_numeric() => Ok(accumulate_character(
@@ -449,6 +457,79 @@ mod tests {
         let expected_tokens = vec![
             (TokenType::True, None),
             (TokenType::False, None),
+            (TokenType::EOF, None),
+        ];
+
+        assert_input_tokenizes_as(input, expected_tokens)
+    }
+
+    #[test]
+    fn it_tokenizes_operators() {
+        let input = String::from(" 1 + 2++ 3 +=4 -5 -- 6-= 7* 8*= 9/ 10/= 11== 12!=13");
+        let expected_tokens = vec![
+            (TokenType::Constant, Some(TokenValue::Float(1.0))),
+            (TokenType::OperatorAddition, None),
+            (TokenType::Constant, Some(TokenValue::Float(2.0))),
+            (TokenType::OperatorIncrement, None),
+            (TokenType::Constant, Some(TokenValue::Float(3.0))),
+            (TokenType::OperatorIncrementBy, None),
+            (TokenType::Constant, Some(TokenValue::Float(4.0))),
+            (TokenType::OperatorSubtraction, None),
+            (TokenType::Constant, Some(TokenValue::Float(5.0))),
+            (TokenType::OperatorDecrement, None),
+            (TokenType::Constant, Some(TokenValue::Float(6.0))),
+            (TokenType::OperatorDecrementBy, None),
+            (TokenType::Constant, Some(TokenValue::Float(7.0))),
+            (TokenType::OperatorMultiplication, None),
+            (TokenType::Constant, Some(TokenValue::Float(8.0))),
+            (TokenType::OperatorMultiplyBy, None),
+            (TokenType::Constant, Some(TokenValue::Float(9.0))),
+            (TokenType::OperatorDivision, None),
+            (TokenType::Constant, Some(TokenValue::Float(10.0))),
+            (TokenType::OperatorDivideBy, None),
+            (TokenType::Constant, Some(TokenValue::Float(11.0))),
+            (TokenType::OperatorEqual, None),
+            (TokenType::Constant, Some(TokenValue::Float(12.0))),
+            (TokenType::OperatorNotEqual, None),
+            (TokenType::Constant, Some(TokenValue::Float(13.0))),
+            (TokenType::EOF, None),
+        ];
+
+        assert_input_tokenizes_as(input, expected_tokens)
+    }
+
+    #[test]
+    fn it_ignores_line_comments() {
+        let input = String::from(
+            "foo // this is the first line comment\n//this is the second line comment\nbar",
+        );
+        let expected_tokens = vec![
+            (
+                TokenType::Identifier,
+                Some(TokenValue::Lexeme(String::from("foo"))),
+            ),
+            (
+                TokenType::Identifier,
+                Some(TokenValue::Lexeme(String::from("bar"))),
+            ),
+            (TokenType::EOF, None),
+        ];
+
+        assert_input_tokenizes_as(input, expected_tokens)
+    }
+
+    #[test]
+    fn it_ignores_block_comments() {
+        let input = String::from("foo /*this\n\n is a block\n comment true false if / * ? */bar");
+        let expected_tokens = vec![
+            (
+                TokenType::Identifier,
+                Some(TokenValue::Lexeme(String::from("foo"))),
+            ),
+            (
+                TokenType::Identifier,
+                Some(TokenValue::Lexeme(String::from("bar"))),
+            ),
             (TokenType::EOF, None),
         ];
 

@@ -9,7 +9,9 @@ pub enum TokenType {
     ParenthesisOpening,
     ParenthesisClosing,
     OperatorMultiplication,
+    OperatorMultiplyBy,
     OperatorDivision,
+    OperatorDivideBy,
     OperatorAddition,
     OperatorSubtraction,
     OperatorIncrement,
@@ -22,6 +24,7 @@ pub enum TokenType {
     OperatorGreaterThan,
     OperatorGreaterThanOrEqual,
     OperatorEqual,
+    OperatorNotEqual,
     Constant,
     Identifier,
     CurlyOpening,
@@ -44,7 +47,9 @@ impl std::fmt::Display for TokenType {
                 TokenType::ParenthesisClosing => ")",
                 TokenType::OperatorAssignment => "=",
                 TokenType::OperatorMultiplication => "*",
+                TokenType::OperatorMultiplyBy => "*=",
                 TokenType::OperatorDivision => "/",
+                TokenType::OperatorDivideBy => "/=",
                 TokenType::OperatorSubtraction => "-",
                 TokenType::OperatorAddition => "+",
                 TokenType::OperatorIncrement => "++",
@@ -56,6 +61,7 @@ impl std::fmt::Display for TokenType {
                 TokenType::OperatorGreaterThan => "GT",
                 TokenType::OperatorGreaterThanOrEqual => "GTE",
                 TokenType::OperatorEqual => "EQ",
+                TokenType::OperatorNotEqual => "NE",
                 TokenType::CurlyOpening => "{",
                 TokenType::CurlyClosing => "}",
                 TokenType::Constant => "Constant",
@@ -94,7 +100,8 @@ impl Token {
             | TokenType::OperatorLessThanOrEqual
             | TokenType::OperatorGreaterThan
             | TokenType::OperatorGreaterThanOrEqual
-            | TokenType::OperatorEqual => true,
+            | TokenType::OperatorEqual
+            | TokenType::OperatorNotEqual => true,
             TokenType::OperatorIncrement | TokenType::OperatorDecrement => false,
             _ => panic!("Token is not operator: {}", self),
         }
@@ -114,7 +121,9 @@ impl TryFrom<String> for Token {
             "(" => TokenType::ParenthesisOpening,
             ")" => TokenType::ParenthesisClosing,
             "*" => TokenType::OperatorMultiplication,
+            "*=" => TokenType::OperatorMultiplyBy,
             "/" => TokenType::OperatorDivision,
+            "/=" => TokenType::OperatorDivideBy,
             "-" => TokenType::OperatorSubtraction,
             "--" => TokenType::OperatorDecrement,
             "-=" => TokenType::OperatorDecrementBy,
@@ -126,6 +135,7 @@ impl TryFrom<String> for Token {
             ">=" => TokenType::OperatorGreaterThanOrEqual,
             "<=" => TokenType::OperatorLessThanOrEqual,
             "==" => TokenType::OperatorEqual,
+            "!=" => TokenType::OperatorNotEqual,
             "=" => TokenType::OperatorAssignment,
             "{" => TokenType::CurlyOpening,
             "}" => TokenType::CurlyClosing,
