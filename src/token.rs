@@ -26,6 +26,8 @@ pub enum TokenType {
     Identifier,
     CurlyOpening,
     CurlyClosing,
+    True,
+    False,
     EOF,
 }
 
@@ -58,6 +60,8 @@ impl std::fmt::Display for TokenType {
                 TokenType::CurlyClosing => "}",
                 TokenType::Constant => "Constant",
                 TokenType::Identifier => "Identifier",
+                TokenType::True => "true",
+                TokenType::False => "false",
                 TokenType::EOF => "EOF",
             }
         )
@@ -104,6 +108,8 @@ impl TryFrom<String> for Token {
         let token_type = match value.as_str() {
             "for" => TokenType::For,
             "if" => TokenType::If,
+            "true" => TokenType::True,
+            "false" => TokenType::False,
             ";" => TokenType::Semicolon,
             "(" => TokenType::ParenthesisOpening,
             ")" => TokenType::ParenthesisClosing,
@@ -136,7 +142,7 @@ impl TryFrom<String> for Token {
 
         let token_value = match token_type {
             TokenType::Constant => Some(TokenValue::Float(value.parse().unwrap())),
-            TokenType::Identifier => Some(TokenValue::Lexeme(value)), // TODO: use an actual value from the symbol table
+            TokenType::Identifier => Some(TokenValue::Lexeme(value)),
             _ => None,
         };
 

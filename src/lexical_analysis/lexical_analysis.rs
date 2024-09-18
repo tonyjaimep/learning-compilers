@@ -429,7 +429,6 @@ mod tests {
         let expected_tokens = vec![
             (TokenType::For, None),
             (TokenType::If, None),
-            // TODO: replace '42' with 0 and 1
             (
                 TokenType::Identifier,
                 Some(TokenValue::Lexeme("foo".into())),
@@ -438,6 +437,18 @@ mod tests {
                 TokenType::Identifier,
                 Some(TokenValue::Lexeme("bar".into())),
             ),
+            (TokenType::EOF, None),
+        ];
+
+        assert_input_tokenizes_as(input, expected_tokens)
+    }
+
+    #[test]
+    fn it_tokenizes_booleans() {
+        let input = String::from("true false");
+        let expected_tokens = vec![
+            (TokenType::True, None),
+            (TokenType::False, None),
             (TokenType::EOF, None),
         ];
 
