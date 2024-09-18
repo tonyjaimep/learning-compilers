@@ -64,10 +64,16 @@ impl std::fmt::Display for TokenType {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
+pub enum TokenValue {
+    SymbolKey(u16),
+    Float(f32),
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub struct Token {
     pub token_type: TokenType,
-    pub value: Option<u16>,
+    pub value: Option<TokenValue>,
 }
 
 impl Token {
@@ -118,7 +124,7 @@ impl TryFrom<String> for Token {
             "{" => TokenType::CurlyOpening,
             "}" => TokenType::CurlyClosing,
             _ => {
-                if Regex::new(r"^[0-9]+$").unwrap().is_match(&value) {
+                if Regex::new(r"^[0-9]+(\.[0-9]+)?$").unwrap().is_match(&value) {
                     TokenType::Constant
                 } else if Regex::new(r"^[a-zA-Z]+$").unwrap().is_match(&value) {
                     TokenType::Identifier
@@ -129,7 +135,8 @@ impl TryFrom<String> for Token {
         };
 
         let token_value = match token_type {
-            TokenType::Constant => Some(value.parse::<u16>().unwrap()),
+            TokenType::Constant => Some(TokenValue::Float(value.parse().unwrap())),
+            TokenType::Identifier => Some(TokenValue::SymbolKey(42)), // TODO: use an actual value from the symbol table
             _ => None,
         };
 
@@ -143,7 +150,7 @@ impl TryFrom<String> for Token {
 impl std::fmt::Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.value.is_some() {
-            write!(f, "{}<{}>", self.token_type, self.value.unwrap())
+            write!(f, "{}<{:?}>", self.token_type, self.value.clone().unwrap())
         } else {
             write!(f, "<{}>", self.token_type)
         }
