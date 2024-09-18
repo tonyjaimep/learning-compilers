@@ -1,6 +1,9 @@
 use std::iter::Peekable;
 
-use crate::token::*;
+use crate::{
+    symbol_table::{self, SymbolTable},
+    token::*,
+};
 
 #[derive(Debug)]
 enum TokenBuildingStateType {
@@ -46,6 +49,11 @@ macro_rules! grouping_characters {
     () => {
         '{' | '}' | '(' | ')'
     };
+}
+
+fn tokenize(string: String, symbol_table: SymbolTable) -> Result<(Token, SymbolTable)> {
+    let token = Token::try_from(string)?;
+    symbol_table.insert(k, v)
 }
 
 fn reset_state_with_state_type(
@@ -472,13 +480,13 @@ mod tests {
             (TokenType::Constant, Some(TokenValue::Float(2.0))),
             (TokenType::OperatorIncrement, None),
             (TokenType::Constant, Some(TokenValue::Float(3.0))),
-            (TokenType::OperatorIncrementBy, None),
+            (TokenType::OperatorIncreaseBy, None),
             (TokenType::Constant, Some(TokenValue::Float(4.0))),
             (TokenType::OperatorSubtraction, None),
             (TokenType::Constant, Some(TokenValue::Float(5.0))),
             (TokenType::OperatorDecrement, None),
             (TokenType::Constant, Some(TokenValue::Float(6.0))),
-            (TokenType::OperatorDecrementBy, None),
+            (TokenType::OperatorDecreaseBy, None),
             (TokenType::Constant, Some(TokenValue::Float(7.0))),
             (TokenType::OperatorMultiplication, None),
             (TokenType::Constant, Some(TokenValue::Float(8.0))),

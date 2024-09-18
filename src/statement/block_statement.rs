@@ -1,24 +1,11 @@
-use std::{fmt, iter::Peekable};
+use std::iter::Peekable;
 
-use crate::token::{expect_token, Token, TokenType};
+use crate::{
+    syntax_analysis::{AbstractSyntaxTree, SyntaxComponent},
+    token::{expect_token, Token, TokenType},
+};
 
-use super::{parse_statement, Statement};
-
-pub struct BlockStatement {
-    pub body: Vec<Box<Statement>>,
-}
-
-impl fmt::Display for BlockStatement {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "BlockStart\n{}\nBlockEnd",
-            self.body
-                .iter()
-                .fold(String::new(), |s, c| format!("{}\n{}", s, c))
-        )
-    }
-}
+use super::parse_statement;
 
 /**
  * block statement
@@ -32,21 +19,21 @@ impl fmt::Display for BlockStatement {
  */
 pub fn parse_block(
     input: &mut Peekable<impl Iterator<Item = Token>>,
-) -> Result<BlockStatement, String> {
+) -> Result<AbstractSyntaxTree, String> {
     log::trace!("Parsing block");
     expect_token(&mut *input, TokenType::CurlyOpening)?;
 
-    let mut body = Vec::new();
+    let mut node = AbstractSyntaxTree::new(SyntaxComponent::Sequence);
 
     while let Some(token) = input.peek() {
         if token.token_type == TokenType::CurlyClosing {
             break;
         }
         let statement = parse_statement(input)?;
-        body.push(Box::new(statement));
+        node.push_back(statement);
     }
 
     expect_token(input, TokenType::CurlyClosing)?;
 
-    Ok(BlockStatement { body })
+    Ok(node)
 }

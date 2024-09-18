@@ -1,26 +1,6 @@
 use std::iter::Peekable;
 
-use trees::{tr, Node, Tree};
-
-use crate::token::*;
-
-pub type Expression = Tree<Token>;
-
-pub fn expression_to_string(expression: &Node<Token>) -> String {
-    if expression.has_no_child() {
-        expression.data().to_string()
-    } else {
-        format!(
-            "{}( {})",
-            expression.data(),
-            expression.iter().fold(String::new(), |s, c| format!(
-                "{}{} ",
-                s,
-                expression_to_string(c)
-            ))
-        )
-    }
-}
+use crate::{syntax_analysis::AbstractSyntaxTree, token::*};
 
 // examples of expressions
 // 5 + 1
@@ -39,7 +19,7 @@ fn token_concludes_expression(token: &Token) -> bool {
 
 pub fn parse_expression(
     input: &mut Peekable<impl Iterator<Item = Token>>,
-) -> Result<Expression, String> {
+) -> Result<AbstractSyntaxTree, String> {
     log::debug!("Parsing expression");
 
     let mut expression_tokens: Vec<Token> = vec![];
@@ -59,21 +39,19 @@ pub fn parse_expression(
 
     if expression_tokens.len() == 1 {
         let only_token = expression_tokens[0].clone();
-        match only_token.token_type {
+        return match only_token.token_type {
             TokenType::Constant | TokenType::Identifier => {
-                return Ok(Tree::new(only_token));
+                Ok(AbstractSyntaxTree::new(only_token.try_into()?))
             }
-            _ => {
-                return Err(String::from("Expected constant or identifier as operands"));
-            }
-        }
+            _ => Err("Expected constant or identifier as operands".into()),
+        };
     }
 
     let operator_precedence = vec![
         vec![
             TokenType::OperatorAssignment,
-            TokenType::OperatorIncrementBy,
-            TokenType::OperatorDecrementBy,
+            TokenType::OperatorIncreaseBy,
+            TokenType::OperatorDecreaseBy,
         ],
         vec![
             TokenType::OperatorDecrement,
@@ -100,7 +78,8 @@ pub fn parse_expression(
 
             if operator_position_option.is_some() {
                 let position = operator_position_option.unwrap();
-                let operator = expression_tokens[position].clone();
+                let operator = &expression_tokens[position];
+                let mut node = AbstractSyntaxTree::new(operator.clone().try_into()?);
 
                 if operator.is_binary_operator() {
                     let first_operand = parse_expression(
@@ -115,11 +94,11 @@ pub fn parse_expression(
                             .into_iter()
                             .peekable(),
                     )?;
-                    let mut root = Tree::new(operator);
-                    root.push_back(first_operand);
-                    root.push_back(second_operand);
-                    return Ok(root);
+                    node.push_back(first_operand);
+                    node.push_back(second_operand);
+                    return Ok(node);
                 } else {
+                    // operator is unary
                     let operand_tokens: &[Token] = if position == 0 {
                         &expression_tokens[1..]
                     } else {
@@ -127,8 +106,9 @@ pub fn parse_expression(
                     };
                     let mut operand_tokens_iter = operand_tokens.to_vec().into_iter().peekable();
                     let operand = parse_expression(&mut operand_tokens_iter)?;
+                    node.push_back(operand);
 
-                    return Ok(tr(operator) / operand);
+                    return Ok(node);
                 }
             }
         }

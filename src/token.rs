@@ -15,9 +15,9 @@ pub enum TokenType {
     OperatorAddition,
     OperatorSubtraction,
     OperatorIncrement,
-    OperatorIncrementBy,
+    OperatorIncreaseBy,
     OperatorDecrement,
-    OperatorDecrementBy,
+    OperatorDecreaseBy,
     OperatorAssignment,
     OperatorLessThan,
     OperatorLessThanOrEqual,
@@ -54,8 +54,8 @@ impl std::fmt::Display for TokenType {
                 TokenType::OperatorAddition => "+",
                 TokenType::OperatorIncrement => "++",
                 TokenType::OperatorDecrement => "--",
-                TokenType::OperatorIncrementBy => "+=",
-                TokenType::OperatorDecrementBy => "-=",
+                TokenType::OperatorIncreaseBy => "+=",
+                TokenType::OperatorDecreaseBy => "-=",
                 TokenType::OperatorLessThan => "LT",
                 TokenType::OperatorLessThanOrEqual => "LTE",
                 TokenType::OperatorGreaterThan => "GT",
@@ -93,8 +93,8 @@ impl Token {
             | TokenType::OperatorDivision
             | TokenType::OperatorAddition
             | TokenType::OperatorSubtraction
-            | TokenType::OperatorIncrementBy
-            | TokenType::OperatorDecrementBy
+            | TokenType::OperatorIncreaseBy
+            | TokenType::OperatorDecreaseBy
             | TokenType::OperatorAssignment
             | TokenType::OperatorLessThan
             | TokenType::OperatorLessThanOrEqual
@@ -126,9 +126,9 @@ impl TryFrom<String> for Token {
             "/=" => TokenType::OperatorDivideBy,
             "-" => TokenType::OperatorSubtraction,
             "--" => TokenType::OperatorDecrement,
-            "-=" => TokenType::OperatorDecrementBy,
+            "-=" => TokenType::OperatorDecreaseBy,
             "++" => TokenType::OperatorIncrement,
-            "+=" => TokenType::OperatorIncrementBy,
+            "+=" => TokenType::OperatorIncreaseBy,
             "+" => TokenType::OperatorAddition,
             ">" => TokenType::OperatorGreaterThan,
             "<" => TokenType::OperatorLessThan,
