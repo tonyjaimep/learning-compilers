@@ -430,8 +430,14 @@ mod tests {
             (TokenType::For, None),
             (TokenType::If, None),
             // TODO: replace '42' with 0 and 1
-            (TokenType::Identifier, Some(TokenValue::SymbolKey(42))),
-            (TokenType::Identifier, Some(TokenValue::SymbolKey(42))),
+            (
+                TokenType::Identifier,
+                Some(TokenValue::Lexeme("foo".into())),
+            ),
+            (
+                TokenType::Identifier,
+                Some(TokenValue::Lexeme("bar".into())),
+            ),
             (TokenType::EOF, None),
         ];
 

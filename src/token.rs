@@ -66,7 +66,7 @@ impl std::fmt::Display for TokenType {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum TokenValue {
-    SymbolKey(u16),
+    Lexeme(String),
     Float(f32),
 }
 
@@ -136,7 +136,7 @@ impl TryFrom<String> for Token {
 
         let token_value = match token_type {
             TokenType::Constant => Some(TokenValue::Float(value.parse().unwrap())),
-            TokenType::Identifier => Some(TokenValue::SymbolKey(42)), // TODO: use an actual value from the symbol table
+            TokenType::Identifier => Some(TokenValue::Lexeme(value)), // TODO: use an actual value from the symbol table
             _ => None,
         };
 
