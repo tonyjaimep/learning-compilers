@@ -11,8 +11,8 @@ use crate::{syntax_analysis::AbstractSyntaxTree, token::*};
 // foo++
 
 fn token_concludes_expression(token: &Token) -> bool {
-    match token.token_type {
-        TokenType::EOF | TokenType::Semicolon | TokenType::ParenthesisClosing => true,
+    match token {
+        Token::EOF | Token::Semicolon | Token::ParenthesisClosing => true,
         _ => false,
     }
 }
@@ -39,8 +39,8 @@ pub fn parse_expression(
 
     if expression_tokens.len() == 1 {
         let only_token = expression_tokens[0].clone();
-        return match only_token.token_type {
-            TokenType::Constant | TokenType::Identifier => {
+        return match only_token {
+            Token::Constant(_) | Token::Identifier(_) => {
                 Ok(AbstractSyntaxTree::new(only_token.try_into()?))
             }
             _ => Err("Expected constant or identifier as operands".into()),
@@ -48,22 +48,19 @@ pub fn parse_expression(
     }
 
     let operator_precedence = vec![
-        vec![TokenType::OperatorAssignment],
-        vec![TokenType::OperatorAddition, TokenType::OperatorSubtraction],
+        vec![Token::OperatorAssignment],
+        vec![Token::OperatorAddition, Token::OperatorSubtraction],
+        vec![Token::OperatorMultiplication, Token::OperatorDivision],
         vec![
-            TokenType::OperatorMultiplication,
-            TokenType::OperatorDivision,
+            Token::OperatorDecrement,
+            Token::OperatorIncrement,
+            Token::OperatorGreaterThan,
+            Token::OperatorGreaterThanOrEqual,
+            Token::OperatorLessThan,
+            Token::OperatorLessThanOrEqual,
+            Token::OperatorEqual,
         ],
-        vec![
-            TokenType::OperatorDecrement,
-            TokenType::OperatorIncrement,
-            TokenType::OperatorGreaterThan,
-            TokenType::OperatorGreaterThanOrEqual,
-            TokenType::OperatorLessThan,
-            TokenType::OperatorLessThanOrEqual,
-            TokenType::OperatorEqual,
-        ],
-        vec![TokenType::OperatorIncreaseBy, TokenType::OperatorDecreaseBy],
+        vec![Token::OperatorIncreaseBy, Token::OperatorDecreaseBy],
     ];
 
     for precedence in operator_precedence {
@@ -71,7 +68,7 @@ pub fn parse_expression(
             let operator_position_option = expression_tokens
                 .clone()
                 .into_iter()
-                .position(|token| token.token_type == operator_type);
+                .position(|token| token == operator_type);
 
             if operator_position_option.is_some() {
                 let position = operator_position_option.unwrap();

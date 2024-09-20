@@ -2,7 +2,7 @@ use std::iter::Peekable;
 
 use crate::{
     syntax_analysis::AbstractSyntaxTree,
-    token::{expect_token, Token, TokenType},
+    token::{expect_token, Token},
 };
 
 use super::{parse_block, parse_for, parse_if, parse_optional_expression};
@@ -11,13 +11,13 @@ pub fn parse_statement(
     input: &mut Peekable<impl Iterator<Item = Token>>,
 ) -> Result<AbstractSyntaxTree, String> {
     let value = match input.peek() {
-        Some(next_token) => match next_token.token_type {
-            TokenType::For => parse_for(input)?,
-            TokenType::If => parse_if(input)?,
-            TokenType::CurlyOpening => parse_block(input)?,
+        Some(next_token) => match next_token {
+            Token::For => parse_for(input)?,
+            Token::If => parse_if(input)?,
+            Token::CurlyOpening => parse_block(input)?,
             _ => {
                 let optional_expression = parse_optional_expression(input)?;
-                expect_token(input, TokenType::Semicolon)?;
+                expect_token(input, Token::Semicolon)?;
                 optional_expression
             }
         },

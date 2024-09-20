@@ -3,7 +3,7 @@ use std::iter::Peekable;
 use crate::{
     statement::{parse_optional_expression, parse_statement},
     syntax_analysis::{AbstractSyntaxTree, SyntaxComponent},
-    token::{expect_token, Token, TokenType},
+    token::{expect_token, Token},
 };
 
 /**
@@ -19,28 +19,28 @@ pub fn parse_for(
     log::trace!("Parsing For");
     let mut node = AbstractSyntaxTree::new(SyntaxComponent::For);
 
-    expect_token(&mut *input, TokenType::For)?;
+    expect_token(&mut *input, Token::For)?;
 
     // (
-    expect_token(&mut *input, TokenType::ParenthesisOpening)?;
+    expect_token(&mut *input, Token::ParenthesisOpening)?;
 
     // initial expression. e.g: i = 0
     node.push_back(parse_optional_expression(&mut *input)?);
 
     // ;
-    expect_token(&mut *input, TokenType::Semicolon)?;
+    expect_token(&mut *input, Token::Semicolon)?;
 
     // condition. e.g: i < 100
     node.push_back(parse_optional_expression(&mut *input)?);
 
     // ;
-    expect_token(&mut *input, TokenType::Semicolon)?;
+    expect_token(&mut *input, Token::Semicolon)?;
 
     // post loop expression. e.g. i++
     node.push_back(parse_optional_expression(&mut *input)?);
 
     // )
-    expect_token(&mut *input, TokenType::ParenthesisClosing)?;
+    expect_token(&mut *input, Token::ParenthesisClosing)?;
 
     // loop body
     node.push_back(parse_statement(&mut *input)?);

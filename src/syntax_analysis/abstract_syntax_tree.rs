@@ -1,6 +1,6 @@
-use trees::Tree;
+use trees::{Node, Tree};
 
-use crate::token::{Token, TokenType, TokenValue};
+use crate::token::Token;
 
 #[derive(Debug, PartialEq)]
 pub enum Relation {
@@ -31,6 +31,12 @@ pub enum UnaryOperation {
 }
 
 #[derive(Debug, PartialEq)]
+pub enum Constant {
+    Float(f32),
+    Boolean(bool),
+}
+
+#[derive(Debug, PartialEq)]
 pub enum SyntaxComponent {
     Null,
     Sequence,
@@ -40,7 +46,7 @@ pub enum SyntaxComponent {
     Relation(Relation),
     BinaryOperation(BinaryOperation),
     UnaryOperation(UnaryOperation),
-    Constant(f32),
+    Constant(Constant),
     Identifier(String),
 }
 
@@ -50,54 +56,34 @@ impl TryFrom<Token> for SyntaxComponent {
     type Error = String;
 
     fn try_from(token: Token) -> Result<Self, Self::Error> {
-        let ok_value = match token.token_type {
-            TokenType::If => Self::If,
-            TokenType::For => Self::For,
+        let ok_value = match token {
+            Token::If => Self::If,
+            Token::For => Self::For,
 
-            TokenType::OperatorMultiplication => Self::BinaryOperation(BinaryOperation::Multiply),
-            TokenType::OperatorMultiplyBy => Self::BinaryOperation(BinaryOperation::MultiplyBy),
-            TokenType::OperatorDivision => Self::BinaryOperation(BinaryOperation::Divide),
-            TokenType::OperatorDivideBy => Self::BinaryOperation(BinaryOperation::DivideBy),
-            TokenType::OperatorAddition => Self::BinaryOperation(BinaryOperation::Add),
-            TokenType::OperatorSubtraction => Self::BinaryOperation(BinaryOperation::Subtract),
-            TokenType::OperatorIncreaseBy => Self::BinaryOperation(BinaryOperation::IncreaseBy),
-            TokenType::OperatorDecreaseBy => Self::BinaryOperation(BinaryOperation::DecreaseBy),
+            Token::OperatorMultiplication => Self::BinaryOperation(BinaryOperation::Multiply),
+            Token::OperatorMultiplyBy => Self::BinaryOperation(BinaryOperation::MultiplyBy),
+            Token::OperatorDivision => Self::BinaryOperation(BinaryOperation::Divide),
+            Token::OperatorDivideBy => Self::BinaryOperation(BinaryOperation::DivideBy),
+            Token::OperatorAddition => Self::BinaryOperation(BinaryOperation::Add),
+            Token::OperatorSubtraction => Self::BinaryOperation(BinaryOperation::Subtract),
+            Token::OperatorIncreaseBy => Self::BinaryOperation(BinaryOperation::IncreaseBy),
+            Token::OperatorDecreaseBy => Self::BinaryOperation(BinaryOperation::DecreaseBy),
 
-            TokenType::OperatorIncrement => Self::UnaryOperation(UnaryOperation::Increment),
-            TokenType::OperatorDecrement => Self::UnaryOperation(UnaryOperation::Decrement),
+            Token::OperatorIncrement => Self::UnaryOperation(UnaryOperation::Increment),
+            Token::OperatorDecrement => Self::UnaryOperation(UnaryOperation::Decrement),
 
-            TokenType::OperatorAssignment => Self::Assignment,
+            Token::OperatorAssignment => Self::Assignment,
 
-            TokenType::OperatorLessThan => Self::Relation(Relation::LessThan),
-            TokenType::OperatorLessThanOrEqual => Self::Relation(Relation::LessThanOrEqual),
-            TokenType::OperatorGreaterThan => Self::Relation(Relation::GreaterThan),
-            TokenType::OperatorGreaterThanOrEqual => Self::Relation(Relation::GreaterThanOrEqual),
-            TokenType::OperatorEqual => Self::Relation(Relation::EqualTo),
-            TokenType::OperatorNotEqual => Self::Relation(Relation::NotEqualTo),
-            TokenType::Identifier => {
-                let token_value = token.value.expect(
-                    "Error while parsing syntax component: identifier token does not have a value",
-                );
-
-                if let TokenValue::Lexeme(lexeme) = token_value {
-                    Self::Identifier(lexeme)
-                } else {
-                    return Err("Identifier value must be a lexeme".into());
-                }
-            }
-            TokenType::Constant => {
-                let token_value = token.value.expect(
-                    "Error while parsing syntax component: constant token does not have a value",
-                );
-
-                if let TokenValue::Float(float) = token_value {
-                    SyntaxComponent::Constant(float)
-                } else {
-                    return Err("Constant value must be a float".into());
-                }
-            }
-            TokenType::True => Self::Constant(1.0),
-            TokenType::False => Self::Constant(0.0),
+            Token::OperatorLessThan => Self::Relation(Relation::LessThan),
+            Token::OperatorLessThanOrEqual => Self::Relation(Relation::LessThanOrEqual),
+            Token::OperatorGreaterThan => Self::Relation(Relation::GreaterThan),
+            Token::OperatorGreaterThanOrEqual => Self::Relation(Relation::GreaterThanOrEqual),
+            Token::OperatorEqual => Self::Relation(Relation::EqualTo),
+            Token::OperatorNotEqual => Self::Relation(Relation::NotEqualTo),
+            Token::Identifier(name) => Self::Identifier(name),
+            Token::Constant(value) => Self::Constant(Constant::Float(value)),
+            Token::True => Self::Constant(Constant::Boolean(true)),
+            Token::False => Self::Constant(Constant::Boolean(false)),
             _ => {
                 return Err(format!(
                     "Token {} does not represent a syntax component",
@@ -106,5 +92,16 @@ impl TryFrom<Token> for SyntaxComponent {
             }
         };
         Ok(ok_value)
+    }
+}
+
+pub fn evaluates_to_boolean(node: &Node<SyntaxComponent>) -> bool {
+    match node.data() {
+        SyntaxComponent::Relation(_) => true,
+        SyntaxComponent::Constant(constant) => match constant {
+            Constant::Boolean(_) => true,
+            _ => false,
+        },
+        _ => false,
     }
 }

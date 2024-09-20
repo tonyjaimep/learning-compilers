@@ -1,8 +1,8 @@
 use regex::Regex;
 use std::fmt;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum TokenType {
+#[derive(Clone, Debug, PartialEq)]
+pub enum Token {
     If,
     Semicolon,
     For,
@@ -25,8 +25,8 @@ pub enum TokenType {
     OperatorGreaterThanOrEqual,
     OperatorEqual,
     OperatorNotEqual,
-    Constant,
-    Identifier,
+    Constant(f32),
+    Identifier(String),
     CurlyOpening,
     CurlyClosing,
     True,
@@ -34,75 +34,63 @@ pub enum TokenType {
     EOF,
 }
 
-impl std::fmt::Display for TokenType {
+impl std::fmt::Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
             "{}",
             match self {
-                TokenType::If => "IF",
-                TokenType::Semicolon => ";",
-                TokenType::For => "FOR",
-                TokenType::ParenthesisOpening => "(",
-                TokenType::ParenthesisClosing => ")",
-                TokenType::OperatorAssignment => "=",
-                TokenType::OperatorMultiplication => "*",
-                TokenType::OperatorMultiplyBy => "*=",
-                TokenType::OperatorDivision => "/",
-                TokenType::OperatorDivideBy => "/=",
-                TokenType::OperatorSubtraction => "-",
-                TokenType::OperatorAddition => "+",
-                TokenType::OperatorIncrement => "++",
-                TokenType::OperatorDecrement => "--",
-                TokenType::OperatorIncreaseBy => "+=",
-                TokenType::OperatorDecreaseBy => "-=",
-                TokenType::OperatorLessThan => "LT",
-                TokenType::OperatorLessThanOrEqual => "LTE",
-                TokenType::OperatorGreaterThan => "GT",
-                TokenType::OperatorGreaterThanOrEqual => "GTE",
-                TokenType::OperatorEqual => "EQ",
-                TokenType::OperatorNotEqual => "NE",
-                TokenType::CurlyOpening => "{",
-                TokenType::CurlyClosing => "}",
-                TokenType::Constant => "Constant",
-                TokenType::Identifier => "Identifier",
-                TokenType::True => "true",
-                TokenType::False => "false",
-                TokenType::EOF => "EOF",
+                Token::If => "IF".to_string(),
+                Token::Semicolon => ";".to_string(),
+                Token::For => "FOR".to_string(),
+                Token::ParenthesisOpening => "(".to_string(),
+                Token::ParenthesisClosing => ")".to_string(),
+                Token::OperatorAssignment => "=".to_string(),
+                Token::OperatorMultiplication => "*".to_string(),
+                Token::OperatorMultiplyBy => "*=".to_string(),
+                Token::OperatorDivision => "/".to_string(),
+                Token::OperatorDivideBy => "/=".to_string(),
+                Token::OperatorSubtraction => "-".to_string(),
+                Token::OperatorAddition => "+".to_string(),
+                Token::OperatorIncrement => "++".to_string(),
+                Token::OperatorDecrement => "--".to_string(),
+                Token::OperatorIncreaseBy => "+=".to_string(),
+                Token::OperatorDecreaseBy => "-=".to_string(),
+                Token::OperatorLessThan => "LT".to_string(),
+                Token::OperatorLessThanOrEqual => "LTE".to_string(),
+                Token::OperatorGreaterThan => "GT".to_string(),
+                Token::OperatorGreaterThanOrEqual => "GTE".to_string(),
+                Token::OperatorEqual => "EQ".to_string(),
+                Token::OperatorNotEqual => "NE".to_string(),
+                Token::CurlyOpening => "{".to_string(),
+                Token::CurlyClosing => "}".to_string(),
+                Token::Constant(value) => format!("Constant({value})"),
+                Token::Identifier(name) => format!("Identifier({name})"),
+                Token::True => "true".to_string(),
+                Token::False => "false".to_string(),
+                Token::EOF => "EOF".to_string(),
             }
         )
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
-pub enum TokenValue {
-    Lexeme(String),
-    Float(f32),
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct Token {
-    pub token_type: TokenType,
-    pub value: Option<TokenValue>,
-}
-
 impl Token {
     pub fn is_binary_operator(self: &Self) -> bool {
-        match self.token_type {
-            TokenType::OperatorMultiplication
-            | TokenType::OperatorDivision
-            | TokenType::OperatorAddition
-            | TokenType::OperatorSubtraction
-            | TokenType::OperatorIncreaseBy
-            | TokenType::OperatorDecreaseBy
-            | TokenType::OperatorAssignment
-            | TokenType::OperatorLessThan
-            | TokenType::OperatorLessThanOrEqual
-            | TokenType::OperatorGreaterThan
-            | TokenType::OperatorGreaterThanOrEqual
-            | TokenType::OperatorEqual
-            | TokenType::OperatorNotEqual => true,
-            TokenType::OperatorIncrement | TokenType::OperatorDecrement => false,
+        match self {
+            Token::OperatorMultiplication
+            | Token::OperatorDivision
+            | Token::OperatorAddition
+            | Token::OperatorSubtraction
+            | Token::OperatorIncreaseBy
+            | Token::OperatorDecreaseBy
+            | Token::OperatorAssignment
+            | Token::OperatorLessThan
+            | Token::OperatorLessThanOrEqual
+            | Token::OperatorGreaterThan
+            | Token::OperatorGreaterThanOrEqual
+            | Token::OperatorEqual
+            | Token::OperatorNotEqual => true,
+            Token::OperatorIncrement | Token::OperatorDecrement => false,
             _ => panic!("Token is not operator: {}", self),
         }
     }
@@ -112,85 +100,66 @@ impl TryFrom<String> for Token {
     type Error = String;
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
-        let token_type = match value.as_str() {
-            "for" => TokenType::For,
-            "if" => TokenType::If,
-            "true" => TokenType::True,
-            "false" => TokenType::False,
-            ";" => TokenType::Semicolon,
-            "(" => TokenType::ParenthesisOpening,
-            ")" => TokenType::ParenthesisClosing,
-            "*" => TokenType::OperatorMultiplication,
-            "*=" => TokenType::OperatorMultiplyBy,
-            "/" => TokenType::OperatorDivision,
-            "/=" => TokenType::OperatorDivideBy,
-            "-" => TokenType::OperatorSubtraction,
-            "--" => TokenType::OperatorDecrement,
-            "-=" => TokenType::OperatorDecreaseBy,
-            "++" => TokenType::OperatorIncrement,
-            "+=" => TokenType::OperatorIncreaseBy,
-            "+" => TokenType::OperatorAddition,
-            ">" => TokenType::OperatorGreaterThan,
-            "<" => TokenType::OperatorLessThan,
-            ">=" => TokenType::OperatorGreaterThanOrEqual,
-            "<=" => TokenType::OperatorLessThanOrEqual,
-            "==" => TokenType::OperatorEqual,
-            "!=" => TokenType::OperatorNotEqual,
-            "=" => TokenType::OperatorAssignment,
-            "{" => TokenType::CurlyOpening,
-            "}" => TokenType::CurlyClosing,
+        let ok_value = match value.as_str() {
+            "for" => Token::For,
+            "if" => Token::If,
+            "true" => Token::True,
+            "false" => Token::False,
+            ";" => Token::Semicolon,
+            "(" => Token::ParenthesisOpening,
+            ")" => Token::ParenthesisClosing,
+            "*" => Token::OperatorMultiplication,
+            "*=" => Token::OperatorMultiplyBy,
+            "/" => Token::OperatorDivision,
+            "/=" => Token::OperatorDivideBy,
+            "-" => Token::OperatorSubtraction,
+            "--" => Token::OperatorDecrement,
+            "-=" => Token::OperatorDecreaseBy,
+            "++" => Token::OperatorIncrement,
+            "+=" => Token::OperatorIncreaseBy,
+            "+" => Token::OperatorAddition,
+            ">" => Token::OperatorGreaterThan,
+            "<" => Token::OperatorLessThan,
+            ">=" => Token::OperatorGreaterThanOrEqual,
+            "<=" => Token::OperatorLessThanOrEqual,
+            "==" => Token::OperatorEqual,
+            "!=" => Token::OperatorNotEqual,
+            "=" => Token::OperatorAssignment,
+            "{" => Token::CurlyOpening,
+            "}" => Token::CurlyClosing,
             _ => {
                 if Regex::new(r"^[0-9]+(\.[0-9]+)?$").unwrap().is_match(&value) {
-                    TokenType::Constant
-                } else if Regex::new(r"^[a-zA-Z]+$").unwrap().is_match(&value) {
-                    TokenType::Identifier
+                    Token::Constant(value.parse().unwrap())
+                } else if Regex::new(r"^[a-zA-Z][\w_]+$").unwrap().is_match(&value) {
+                    Token::Identifier(value)
                 } else {
                     return Err(format!("Invalid token '{value}'"));
                 }
             }
         };
 
-        let token_value = match token_type {
-            TokenType::Constant => Some(TokenValue::Float(value.parse().unwrap())),
-            TokenType::Identifier => Some(TokenValue::Lexeme(value)),
-            _ => None,
-        };
-
-        Ok(Token {
-            token_type,
-            value: token_value,
-        })
-    }
-}
-
-impl std::fmt::Display for Token {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.value.is_some() {
-            write!(f, "{}<{:?}>", self.token_type, self.value.clone().unwrap())
-        } else {
-            write!(f, "<{}>", self.token_type)
-        }
+        Ok(ok_value)
     }
 }
 
 pub fn expect_token(
     mut input: impl Iterator<Item = Token>,
-    token_type: TokenType,
+    expected_token: Token,
 ) -> Result<Token, String> {
     match input.next() {
-        Some(token) => {
-            if token.token_type != token_type {
+        Some(next_token) => {
+            if next_token != expected_token {
                 Err(format!(
                     "Unexpected token {}, expected {}",
-                    token.token_type, token_type
+                    next_token, expected_token
                 ))
             } else {
-                Ok(token)
+                Ok(next_token)
             }
         }
         None => Err(format!(
             "Unexpected end of token stream, expected {}",
-            token_type
+            expected_token
         )),
     }
 }

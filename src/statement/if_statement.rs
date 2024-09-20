@@ -3,7 +3,7 @@ use std::iter::Peekable;
 use crate::{
     expression::parse_expression,
     syntax_analysis::{AbstractSyntaxTree, SyntaxComponent},
-    token::{expect_token, Token, TokenType},
+    token::{expect_token, Token},
 };
 
 use super::parse_statement;
@@ -19,15 +19,15 @@ pub fn parse_if(
     input: &mut Peekable<impl Iterator<Item = Token>>,
 ) -> Result<AbstractSyntaxTree, String> {
     log::trace!("Parsing If");
-    expect_token(&mut *input, TokenType::If)?;
+    expect_token(&mut *input, Token::If)?;
     let mut node = AbstractSyntaxTree::new(SyntaxComponent::If);
 
-    expect_token(&mut *input, TokenType::ParenthesisOpening)?;
+    expect_token(&mut *input, Token::ParenthesisOpening)?;
 
     // condition
     node.push_back(parse_expression(&mut *input)?);
 
-    expect_token(&mut *input, TokenType::ParenthesisClosing)?;
+    expect_token(&mut *input, Token::ParenthesisClosing)?;
 
     // body
     node.push_back(parse_statement(&mut *input)?);

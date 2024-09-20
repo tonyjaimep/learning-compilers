@@ -3,7 +3,7 @@ use std::iter::Peekable;
 use crate::{
     expression::parse_expression,
     syntax_analysis::{AbstractSyntaxTree, SyntaxComponent},
-    token::{Token, TokenType},
+    token::Token,
 };
 
 pub fn parse_optional_expression(
@@ -12,9 +12,9 @@ pub fn parse_optional_expression(
     log::trace!("Parsing Optional Expression");
 
     let ok_value = match input.peek() {
-        Some(next_token) => match next_token.token_type {
+        Some(next_token) => match next_token {
             // empty expression
-            TokenType::EOF | TokenType::Semicolon | TokenType::ParenthesisClosing => {
+            Token::EOF | Token::Semicolon | Token::ParenthesisClosing => {
                 log::trace!("Got to end of expression");
                 AbstractSyntaxTree::new(SyntaxComponent::Null)
             }

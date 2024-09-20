@@ -317,13 +317,7 @@ fn build_tokens(
 ) -> Result<TokenBuildingState, String> {
     match input.next() {
         Some(character) => build_tokens(input, handle_character(character, state)?),
-        None => Ok(push_token(
-            commit_accumulator(state)?,
-            Token {
-                value: None,
-                token_type: TokenType::EOF,
-            },
-        )),
+        None => Ok(push_token(commit_accumulator(state)?, Token::EOF)),
     }
 }
 
@@ -346,22 +340,18 @@ pub fn lexical_analysis(
 mod tests {
     use super::*;
 
-    fn assert_input_tokenizes_as(
-        input: String,
-        expected_tokens: Vec<(TokenType, Option<TokenValue>)>,
-    ) {
+    fn assert_input_tokenizes_as(input: String, expected_tokens: Vec<Token>) {
         let result = lexical_analysis(input.chars());
         assert!(result.is_ok());
 
         let mut actual = result.unwrap();
 
-        for (token_type, token_value) in expected_tokens {
+        for expected_token in expected_tokens {
             let next_option = actual.next();
             assert!(next_option.is_some());
 
             let actual_token = next_option.unwrap();
-            assert_eq!(actual_token.token_type, token_type);
-            assert_eq!(actual_token.value, token_value);
+            assert_eq!(actual_token, expected_token);
         }
 
         assert!(actual.next().is_none());
@@ -370,10 +360,7 @@ mod tests {
     #[test]
     fn it_tokenizes_floating_point_values() {
         let input = String::from("123.4");
-        let expected_tokens = vec![
-            (TokenType::Constant, Some(TokenValue::Float(123.4))),
-            (TokenType::EOF, None),
-        ];
+        let expected_tokens = vec![Token::Constant(123.4), Token::EOF];
 
         assert_input_tokenizes_as(input, expected_tokens);
     }
@@ -381,10 +368,7 @@ mod tests {
     #[test]
     fn it_tokenizes_integer_constants_as_floats() {
         let input = String::from("42");
-        let expected_tokens = vec![
-            (TokenType::Constant, Some(TokenValue::Float(42.0))),
-            (TokenType::EOF, None),
-        ];
+        let expected_tokens = vec![Token::Constant(42.0), Token::EOF];
 
         assert_input_tokenizes_as(input, expected_tokens);
     }
@@ -393,13 +377,13 @@ mod tests {
     fn it_interrupts_numbers_when_grouping_characters_are_reached() {
         let input = String::from("24{9821}2)");
         let expected_tokens = vec![
-            (TokenType::Constant, Some(TokenValue::Float(24.0))),
-            (TokenType::CurlyOpening, None),
-            (TokenType::Constant, Some(TokenValue::Float(9821.0))),
-            (TokenType::CurlyClosing, None),
-            (TokenType::Constant, Some(TokenValue::Float(2.0))),
-            (TokenType::ParenthesisClosing, None),
-            (TokenType::EOF, None),
+            Token::Constant(24.0),
+            Token::CurlyOpening,
+            Token::Constant(9821.0),
+            Token::CurlyClosing,
+            Token::Constant(2.0),
+            Token::ParenthesisClosing,
+            Token::EOF,
         ];
 
         assert_input_tokenizes_as(input, expected_tokens)
@@ -409,11 +393,11 @@ mod tests {
     fn it_breaks_numbers_apart_using_whitespace() {
         let input = String::from("42 60 42.8 231");
         let expected_tokens = vec![
-            (TokenType::Constant, Some(TokenValue::Float(42.0))),
-            (TokenType::Constant, Some(TokenValue::Float(60.0))),
-            (TokenType::Constant, Some(TokenValue::Float(42.8))),
-            (TokenType::Constant, Some(TokenValue::Float(231.0))),
-            (TokenType::EOF, None),
+            Token::Constant(42.0),
+            Token::Constant(60.0),
+            Token::Constant(42.8),
+            Token::Constant(231.0),
+            Token::EOF,
         ];
 
         assert_input_tokenizes_as(input, expected_tokens);
@@ -422,11 +406,7 @@ mod tests {
     #[test]
     fn it_tokenizes_keywords() {
         let input = String::from("for if");
-        let expected_tokens = vec![
-            (TokenType::For, None),
-            (TokenType::If, None),
-            (TokenType::EOF, None),
-        ];
+        let expected_tokens = vec![Token::For, Token::If, Token::EOF];
 
         assert_input_tokenizes_as(input, expected_tokens);
     }
@@ -435,17 +415,11 @@ mod tests {
     fn it_tokenizes_identifiers() {
         let input = String::from("for if foo bar");
         let expected_tokens = vec![
-            (TokenType::For, None),
-            (TokenType::If, None),
-            (
-                TokenType::Identifier,
-                Some(TokenValue::Lexeme("foo".into())),
-            ),
-            (
-                TokenType::Identifier,
-                Some(TokenValue::Lexeme("bar".into())),
-            ),
-            (TokenType::EOF, None),
+            Token::For,
+            Token::If,
+            Token::Identifier("foo".into()),
+            Token::Identifier("bar".into()),
+            Token::EOF,
         ];
 
         assert_input_tokenizes_as(input, expected_tokens)
@@ -454,11 +428,7 @@ mod tests {
     #[test]
     fn it_tokenizes_booleans() {
         let input = String::from("true false");
-        let expected_tokens = vec![
-            (TokenType::True, None),
-            (TokenType::False, None),
-            (TokenType::EOF, None),
-        ];
+        let expected_tokens = vec![Token::True, Token::False, Token::EOF];
 
         assert_input_tokenizes_as(input, expected_tokens)
     }
@@ -467,32 +437,32 @@ mod tests {
     fn it_tokenizes_operators() {
         let input = String::from(" 1 + 2++ 3 +=4 -5 -- 6-= 7* 8*= 9/ 10/= 11== 12!=13");
         let expected_tokens = vec![
-            (TokenType::Constant, Some(TokenValue::Float(1.0))),
-            (TokenType::OperatorAddition, None),
-            (TokenType::Constant, Some(TokenValue::Float(2.0))),
-            (TokenType::OperatorIncrement, None),
-            (TokenType::Constant, Some(TokenValue::Float(3.0))),
-            (TokenType::OperatorIncreaseBy, None),
-            (TokenType::Constant, Some(TokenValue::Float(4.0))),
-            (TokenType::OperatorSubtraction, None),
-            (TokenType::Constant, Some(TokenValue::Float(5.0))),
-            (TokenType::OperatorDecrement, None),
-            (TokenType::Constant, Some(TokenValue::Float(6.0))),
-            (TokenType::OperatorDecreaseBy, None),
-            (TokenType::Constant, Some(TokenValue::Float(7.0))),
-            (TokenType::OperatorMultiplication, None),
-            (TokenType::Constant, Some(TokenValue::Float(8.0))),
-            (TokenType::OperatorMultiplyBy, None),
-            (TokenType::Constant, Some(TokenValue::Float(9.0))),
-            (TokenType::OperatorDivision, None),
-            (TokenType::Constant, Some(TokenValue::Float(10.0))),
-            (TokenType::OperatorDivideBy, None),
-            (TokenType::Constant, Some(TokenValue::Float(11.0))),
-            (TokenType::OperatorEqual, None),
-            (TokenType::Constant, Some(TokenValue::Float(12.0))),
-            (TokenType::OperatorNotEqual, None),
-            (TokenType::Constant, Some(TokenValue::Float(13.0))),
-            (TokenType::EOF, None),
+            Token::Constant(1.0),
+            Token::OperatorAddition,
+            Token::Constant(2.0),
+            Token::OperatorIncrement,
+            Token::Constant(3.0),
+            Token::OperatorIncreaseBy,
+            Token::Constant(4.0),
+            Token::OperatorSubtraction,
+            Token::Constant(5.0),
+            Token::OperatorDecrement,
+            Token::Constant(6.0),
+            Token::OperatorDecreaseBy,
+            Token::Constant(7.0),
+            Token::OperatorMultiplication,
+            Token::Constant(8.0),
+            Token::OperatorMultiplyBy,
+            Token::Constant(9.0),
+            Token::OperatorDivision,
+            Token::Constant(10.0),
+            Token::OperatorDivideBy,
+            Token::Constant(11.0),
+            Token::OperatorEqual,
+            Token::Constant(12.0),
+            Token::OperatorNotEqual,
+            Token::Constant(13.0),
+            Token::EOF,
         ];
 
         assert_input_tokenizes_as(input, expected_tokens)
@@ -504,15 +474,9 @@ mod tests {
             "foo // this is the first line comment\n//this is the second line comment\nbar",
         );
         let expected_tokens = vec![
-            (
-                TokenType::Identifier,
-                Some(TokenValue::Lexeme(String::from("foo"))),
-            ),
-            (
-                TokenType::Identifier,
-                Some(TokenValue::Lexeme(String::from("bar"))),
-            ),
-            (TokenType::EOF, None),
+            Token::Identifier("foo".into()),
+            Token::Identifier("bar".into()),
+            Token::EOF,
         ];
 
         assert_input_tokenizes_as(input, expected_tokens)
@@ -522,15 +486,9 @@ mod tests {
     fn it_ignores_block_comments() {
         let input = String::from("foo /*this\n\n is a block\n comment true false if / * ? */bar");
         let expected_tokens = vec![
-            (
-                TokenType::Identifier,
-                Some(TokenValue::Lexeme(String::from("foo"))),
-            ),
-            (
-                TokenType::Identifier,
-                Some(TokenValue::Lexeme(String::from("bar"))),
-            ),
-            (TokenType::EOF, None),
+            Token::Identifier("foo".into()),
+            Token::Identifier("bar".into()),
+            Token::EOF,
         ];
 
         assert_input_tokenizes_as(input, expected_tokens)
