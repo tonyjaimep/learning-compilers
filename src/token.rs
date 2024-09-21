@@ -31,6 +31,9 @@ pub enum Token {
     CurlyClosing,
     True,
     False,
+    Not,
+    NumType,
+    BoolType,
     EOF,
 }
 
@@ -68,6 +71,9 @@ impl std::fmt::Display for Token {
                 Token::Identifier(name) => format!("Identifier({name})"),
                 Token::True => "true".to_string(),
                 Token::False => "false".to_string(),
+                Token::NumType => "num".to_string(),
+                Token::BoolType => "bool".to_string(),
+                Token::Not => "NOT".to_string(),
                 Token::EOF => "EOF".to_string(),
             }
         )
@@ -90,7 +96,7 @@ impl Token {
             | Token::OperatorGreaterThanOrEqual
             | Token::OperatorEqual
             | Token::OperatorNotEqual => true,
-            Token::OperatorIncrement | Token::OperatorDecrement => false,
+            Token::OperatorIncrement | Token::OperatorDecrement | Token::Not => false,
             _ => panic!("Token is not operator: {}", self),
         }
     }
@@ -105,7 +111,10 @@ impl TryFrom<String> for Token {
             "if" => Token::If,
             "true" => Token::True,
             "false" => Token::False,
+            "num" => Token::NumType,
+            "bool" => Token::BoolType,
             ";" => Token::Semicolon,
+            "!" => Token::Not,
             "(" => Token::ParenthesisOpening,
             ")" => Token::ParenthesisClosing,
             "*" => Token::OperatorMultiplication,
@@ -130,7 +139,10 @@ impl TryFrom<String> for Token {
             _ => {
                 if Regex::new(r"^[0-9]+(\.[0-9]+)?$").unwrap().is_match(&value) {
                     Token::Constant(value.parse().unwrap())
-                } else if Regex::new(r"^[a-zA-Z][\w_]+$").unwrap().is_match(&value) {
+                } else if Regex::new(r"^[a-zA-Z_][a-zA-Z_0-9]*$")
+                    .unwrap()
+                    .is_match(&value)
+                {
                     Token::Identifier(value)
                 } else {
                     return Err(format!("Invalid token '{value}'"));

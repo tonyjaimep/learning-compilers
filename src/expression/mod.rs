@@ -40,10 +40,13 @@ pub fn parse_expression(
     if expression_tokens.len() == 1 {
         let only_token = expression_tokens[0].clone();
         return match only_token {
-            Token::Constant(_) | Token::Identifier(_) => {
+            Token::Constant(_) | Token::Identifier(_) | Token::True | Token::False => {
                 Ok(AbstractSyntaxTree::new(only_token.try_into()?))
             }
-            _ => Err("Expected constant or identifier as operands".into()),
+            _ => Err(format!(
+                "Expected constant or identifier as operands. Got {:?}",
+                only_token
+            )),
         };
     }
 
@@ -60,7 +63,11 @@ pub fn parse_expression(
             Token::OperatorLessThanOrEqual,
             Token::OperatorEqual,
         ],
-        vec![Token::OperatorIncreaseBy, Token::OperatorDecreaseBy],
+        vec![
+            Token::OperatorIncreaseBy,
+            Token::OperatorDecreaseBy,
+            Token::Not,
+        ],
     ];
 
     for precedence in operator_precedence {
@@ -108,5 +115,6 @@ pub fn parse_expression(
         }
     }
 
+    println!("{:?}", expression_tokens);
     Err(String::from("Unexpected end of expression"))
 }

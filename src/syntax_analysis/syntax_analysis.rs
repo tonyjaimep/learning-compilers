@@ -30,12 +30,15 @@ mod tests {
 
     use super::*;
     use crate::{
-        syntax_analysis::{BinaryOperation, Constant, Relation, UnaryOperation},
+        syntax_analysis::{BinaryOperation, Constant, Relation, Type, UnaryOperation},
         token::Token,
     };
 
     fn assert_tokens_parse_to(tokens: Vec<Token>, expected: AbstractSyntaxTree) {
         let result = syntax_analysis(&mut tokens.into_iter().peekable());
+        if let Err(message) = &result {
+            println!("{}", message);
+        }
         assert!(result.is_ok());
         let actual = result.unwrap();
         assert_eq!(actual, expected);
@@ -177,6 +180,59 @@ mod tests {
                                 / tr(SyntaxComponent::Constant(Constant::Float(6.0))))
                             / (tr(SyntaxComponent::UnaryOperation(UnaryOperation::Decrement))
                                 / tr(SyntaxComponent::Identifier("j".into())))))));
+
+        assert_tokens_parse_to(tokens, expected);
+    }
+
+    #[test]
+    fn it_parses_variable_declarations() {
+        // bool foo = false; num bar = 23.45;
+        let tokens = vec![
+            Token::BoolType,
+            Token::Identifier("foo".into()),
+            Token::OperatorAssignment,
+            Token::False,
+            Token::Semicolon,
+            Token::NumType,
+            Token::Identifier("bar".into()),
+            Token::OperatorAssignment,
+            Token::Constant(23.45),
+            Token::Semicolon,
+            Token::EOF,
+        ];
+
+        let expected = tr(SyntaxComponent::Sequence)
+            / (tr(SyntaxComponent::Declaration)
+                / (tr(SyntaxComponent::Type(Type::Boolean)))
+                / (tr(SyntaxComponent::Identifier("foo".into())))
+                / (tr(SyntaxComponent::Constant(Constant::Boolean(false)))))
+            / (tr(SyntaxComponent::Declaration)
+                / (tr(SyntaxComponent::Type(Type::Number)))
+                / (tr(SyntaxComponent::Identifier("bar".into())))
+                / (tr(SyntaxComponent::Constant(Constant::Float(23.45)))));
+
+        assert_tokens_parse_to(tokens, expected);
+    }
+
+    #[test]
+    fn it_parses_negation() {
+        // bool foo = !bar;
+        let tokens = vec![
+            Token::BoolType,
+            Token::Identifier("foo".into()),
+            Token::OperatorAssignment,
+            Token::Not,
+            Token::Identifier("bar".into()),
+            Token::Semicolon,
+            Token::EOF,
+        ];
+
+        let expected = tr(SyntaxComponent::Sequence)
+            / (tr(SyntaxComponent::Declaration)
+                / (tr(SyntaxComponent::Type(Type::Boolean)))
+                / (tr(SyntaxComponent::Identifier("foo".into())))
+                / (tr(SyntaxComponent::UnaryOperation(UnaryOperation::Negation))
+                    / tr(SyntaxComponent::Identifier("bar".into()))));
 
         assert_tokens_parse_to(tokens, expected);
     }

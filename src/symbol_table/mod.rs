@@ -1,11 +1,14 @@
 use std::collections::HashMap;
 
-pub enum SymbolType {
-    Lexeme,
+#[derive(Clone, Debug)]
+pub enum DataType {
+    Boolean,
+    Number,
 }
 
+#[derive(Clone, Debug)]
 pub struct Symbol {
-    symbol_type: SymbolType,
+    pub data_type: DataType,
 }
 
 pub type SymbolTable = HashMap<String, Symbol>;

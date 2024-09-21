@@ -1,4 +1,4 @@
-use trees::{Node, Tree};
+use trees::Tree;
 
 use crate::token::Token;
 
@@ -28,6 +28,7 @@ pub enum BinaryOperation {
 pub enum UnaryOperation {
     Increment,
     Decrement,
+    Negation,
 }
 
 #[derive(Debug, PartialEq)]
@@ -37,12 +38,20 @@ pub enum Constant {
 }
 
 #[derive(Debug, PartialEq)]
+pub enum Type {
+    Number,
+    Boolean,
+}
+
+#[derive(Debug, PartialEq)]
 pub enum SyntaxComponent {
     Null,
     Sequence,
     If,
     For,
     Assignment,
+    Declaration,
+    Type(Type),
     Relation(Relation),
     BinaryOperation(BinaryOperation),
     UnaryOperation(UnaryOperation),
@@ -71,6 +80,7 @@ impl TryFrom<Token> for SyntaxComponent {
 
             Token::OperatorIncrement => Self::UnaryOperation(UnaryOperation::Increment),
             Token::OperatorDecrement => Self::UnaryOperation(UnaryOperation::Decrement),
+            Token::Not => Self::UnaryOperation(UnaryOperation::Negation),
 
             Token::OperatorAssignment => Self::Assignment,
 
@@ -95,13 +105,12 @@ impl TryFrom<Token> for SyntaxComponent {
     }
 }
 
-pub fn evaluates_to_boolean(node: &Node<SyntaxComponent>) -> bool {
-    match node.data() {
-        SyntaxComponent::Relation(_) => true,
-        SyntaxComponent::Constant(constant) => match constant {
-            Constant::Boolean(_) => true,
-            _ => false,
-        },
-        _ => false,
+impl SyntaxComponent {
+    pub fn is_identifier(&self) -> bool {
+        if let Self::Identifier(_) = self {
+            true
+        } else {
+            false
+        }
     }
 }

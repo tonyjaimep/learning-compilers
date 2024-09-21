@@ -206,7 +206,7 @@ fn handle_character(
         },
         TokenBuildingStateType::Not => match character {
             '=' => accumulate_character_and_commit_accumulator(character, state),
-            _ => unexpected_character_error(character, state),
+            _ => commit_accumulator_and_begin_with_character(character, state),
         },
         TokenBuildingStateType::ComposableOperator => match character {
             '=' | composable_operators!() => {
