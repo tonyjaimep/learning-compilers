@@ -37,7 +37,7 @@ pub enum Constant {
     Boolean(bool),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Type {
     Number,
     Boolean,
@@ -46,6 +46,7 @@ pub enum Type {
 #[derive(Debug, PartialEq)]
 pub enum SyntaxComponent {
     Null,
+    // AKA blocks
     Sequence,
     If,
     For,
@@ -111,6 +112,22 @@ impl SyntaxComponent {
             true
         } else {
             false
+        }
+    }
+
+    pub fn try_get_identifier_name(&self) -> Result<String, String> {
+        if let Self::Identifier(name) = self {
+            Ok(name.clone())
+        } else {
+            Err("Cannot get identifier name from non-identifier. Check your assumptions".into())
+        }
+    }
+
+    pub fn try_get_type(&self) -> Result<Type, String> {
+        if let Self::Type(data_type) = self {
+            Ok(data_type.clone())
+        } else {
+            Err("Cannot get identifier name from non-identifier. Check your assumptions".into())
         }
     }
 }

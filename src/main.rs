@@ -1,9 +1,14 @@
 use std::io::{stdin, Read};
+
+use symbol_table::SymbolTable;
 mod expression;
 mod statement;
+mod symbol_table;
 mod token;
 
+mod code_generation;
 mod lexical_analysis;
+mod semantic_analysis;
 mod syntax_analysis;
 
 fn main() {
@@ -24,7 +29,7 @@ fn main() {
 
     log::trace!("Lexical analysis completed");
 
-    let syntax_statement = match syntax_analysis::syntax_analysis(&mut token_stream) {
+    let abstract_syntax_tree = match syntax_analysis::syntax_analysis(&mut token_stream) {
         Ok(value) => value,
         Err(message) => {
             log::error!("Failed syntax analysis: {message}");
@@ -32,5 +37,39 @@ fn main() {
         }
     };
 
-    println!("{:?}", syntax_statement);
+    log::debug!("{:?}", abstract_syntax_tree);
+    log::trace!("Syntax analysis completed");
+
+    let mut symbol_table = SymbolTable::new();
+
+    if let Err(message) =
+        semantic_analysis::semantic_analysis(&abstract_syntax_tree, &mut symbol_table)
+    {
+        log::error!("Failed semantic analysis: {message}");
+        return;
+    }
+
+    log::trace!("Semantic analysis completed");
+
+    let mut icg_symbol_table = SymbolTable::new();
+
+    let code_sequence = match code_generation::intermediate_code_generation(
+        &abstract_syntax_tree,
+        &mut icg_symbol_table,
+    ) {
+        Ok(value) => value,
+        Err(message) => {
+            log::error!("Failed semantic analysis: {message}");
+            return;
+        }
+    };
+
+    println!(
+        "{}",
+        code_sequence
+            .into_iter()
+            .map(|code| format!("{:?}", code))
+            .collect::<Vec<String>>()
+            .join("\n")
+    );
 }

@@ -262,7 +262,7 @@ fn handle_character(
             _ => unexpected_character_error(character, state),
         },
         TokenBuildingStateType::NumericFloatingPoint => match character {
-            '=' | '/' | '!' | composable_operators!() | grouping_characters!() => {
+            ';' | '=' | '/' | '!' | composable_operators!() | grouping_characters!() => {
                 commit_accumulator_and_begin_with_character(character, state)
             }
             _ if character.is_numeric() => Ok(accumulate_character(

@@ -248,6 +248,7 @@ pub fn semantic_analysis(
                 symbol_table.insert(
                     id_name.to_string(),
                     Symbol {
+                        location: None,
                         data_type: identifier_data_type,
                     },
                 );
